@@ -1,0 +1,10 @@
+{
+  "/api": {
+    "target": "http://api.waditu.com",
+    "secure": true,
+    "changeOrigin": true,
+    "pathRewrite": {
+      "^/api": ""
+    }
+  }
+}
