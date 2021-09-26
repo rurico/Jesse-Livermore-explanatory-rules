@@ -277,7 +277,7 @@ export class AppComponent implements OnInit {
         recordTrade('natural_reaction', trade_date, close); continue
       }
 
-      // 6-b 价格低于下跌趋势中最后价格，填入下跌趋势中
+      // 6-b 6-e 价格低于下跌趋势中最后价格，填入下跌趋势中
       if (trade === 'natural_reaction' && this.isTrade(close, 'downward_trend', arr, (p) => p < 0)) {
         // 填入下跌趋势栏
         recordTrade('downward_trend', trade_date, close); continue
@@ -285,6 +285,18 @@ export class AppComponent implements OnInit {
 
       // 6-a 只要低于自然回调栏最后记录的价格，继续填入自然回调中
       if (trade === 'natural_reaction' && this.isTrade(close, 'natural_reaction', arr, (p) => p < 0)) {
+        // 填入自然回调栏
+        recordTrade('natural_reaction', trade_date, close); continue
+      }
+
+      // 6-h
+      if ((trade === 'natural_rally' || trade === 'secondary_reaction') && this.isTrade(close, 'natural_rally', arr, (p) => p > -6) && this.isTrade(close, 'natural_reaction', arr, (p) => p > 0)) {
+        // 填入次级回调
+        recordTrade('secondary_reaction', trade_date, close); continue
+      }
+
+      // 6-h
+      if (trade === 'secondary_reaction' && this.isTrade(close, 'natural_reaction', arr, (p) => p < 0)) {
         // 填入自然回调栏
         recordTrade('natural_reaction', trade_date, close); continue
       }
@@ -301,14 +313,27 @@ export class AppComponent implements OnInit {
         recordTrade('natural_rally', trade_date, close); continue
       }
 
-      // 6-d 最新价格高于上涨趋势栏最后价格，继入上涨趋势栏
+      // 6-d 6-f 最新价格高于上涨趋势栏最后价格，继入上涨趋势栏
       if (trade === 'natural_rally' && this.isTrade(close, 'upward_trend', arr, (p) => p > 0)) {
         // 填入上涨趋势栏
         recordTrade('upward_trend', trade_date, close); continue
       }
 
-      // 6-c 最新价格高于自然回升栏最后价格，继续填入自然回升栏
+      // 6-c 6-d 最新价格高于自然回升栏最后价格，继续填入自然回升栏
       if (trade === 'natural_rally' && this.isTrade(close, 'natural_rally', arr, (p) => p > 0)) {
+        // 填入自然回升栏
+        recordTrade('natural_rally', trade_date, close); continue
+      }
+
+      // 6-g 
+      if ((trade === 'natural_reaction' || trade === 'secondary_rally') && this.isTrade(close, 'natural_reaction', arr, (p) => p > 6) && this.isTrade(close, 'natural_rally', arr, (p) => p < 0)) {
+        // 填入次级回升栏
+        recordTrade('secondary_rally', trade_date, close);
+        continue
+      }
+
+      // 6-g
+      if (trade === 'secondary_rally' && this.isTrade(close, 'natural_rally', arr, (p) => p > 0)) {
         // 填入自然回升栏
         recordTrade('natural_rally', trade_date, close); continue
       }
