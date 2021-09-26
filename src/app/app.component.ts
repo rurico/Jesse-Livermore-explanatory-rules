@@ -134,7 +134,7 @@ export class AppComponent implements OnInit {
 
   requestTushare(param: any): Observable<AjaxResponse> {
     return ajax.post(
-      'https://stock.ruriya.com/api',
+      'http://api.waditu.com',
       Object.assign({ token: this.async.transform(this.token) }, param),
       { 'Content-Type': 'application/json' }
     );
