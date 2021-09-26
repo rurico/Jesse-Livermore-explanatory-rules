@@ -14,4 +14,4 @@ fastify.register(require('fastify-http-proxy'), {
     upstream: 'http://api.waditu.com'
 })
 
-fastify.listen(4086, err => { if (err) throw err })
+fastify.listen(4086, '0.0.0.0', err => { if (err) throw err })
