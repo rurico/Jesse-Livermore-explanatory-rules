@@ -56,7 +56,7 @@ export class AppComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private async: AsyncPipe
-  ) { }
+  ) {}
 
   ngOnInit(): void {
     const UrlObservable = of<any>(new URL(window.location.toString()));
@@ -109,7 +109,7 @@ export class AppComponent implements OnInit {
       queryParams: { startDate, endDate, token },
     });
     setTimeout(() => {
-      window.location.reload()
+      window.location.reload();
     }, 16);
   }
 
@@ -134,7 +134,7 @@ export class AppComponent implements OnInit {
 
   requestTushare(param: any): Observable<AjaxResponse> {
     return ajax.post(
-      'http://api.waditu.com',
+      'http://localhost:4200/api',
       Object.assign({ token: this.async.transform(this.token) }, param),
       { 'Content-Type': 'application/json' }
     );
@@ -187,48 +187,54 @@ export class AppComponent implements OnInit {
 
   findBy(lastKey: string, arr: any[], line: string | null) {
     for (const item of this.iterRight(arr)) {
-      const lastItem = item[lastKey]
+      const lastItem = item[lastKey];
       // 有线，并且最后一个的class名字相等
       if (line && lastItem && lastItem.className == line) {
-        return lastItem
+        return lastItem;
       }
       if (lastItem) {
-        return lastItem
+        return lastItem;
       }
     }
-    return null
+    return null;
   }
 
-  isTrade(close: any, key: string, arr: any[], cb: (percent: any) => boolean, line = null): boolean {
-    const last = this.findBy(key, arr, line)
+  isTrade(
+    close: any,
+    key: string,
+    arr: any[],
+    cb: (percent: any) => boolean,
+    line = null
+  ): boolean {
+    const last = this.findBy(key, arr, line);
     if (last) {
-      const p = this.percent(close, last.close)
-      return cb(p)
+      const p = this.percent(close, last.close);
+      return cb(p);
     }
-    return false
+    return false;
   }
 
   groupBy(arr: any[]): any[] {
-    const [first, second] = arr.splice(0, 2)
-    const list = <any>[]
-    let trade = null
-    let lastPrice = null
+    const [first, second] = arr.splice(0, 2);
+    const list = <any>[];
+    let trade = null;
+    let lastPrice = null;
 
     // 画线
     const drawLine = (trade: string, line: string, arr: any[]) => {
-      const last = this.findBy(trade, arr, null)
-      last && (last.className = line)
-    }
+      const last = this.findBy(trade, arr, null);
+      last && (last.className = line);
+    };
 
     // 记录行情和趋势
     const recordTrade = (key: string, trade_date: string, close: number) => {
       const o = {
         trade_date: moment(trade_date).format('YYYY-MM-DD'),
-      }
-      list.push(Object.assign(o, { [key]: { close } }))
-      lastPrice = close
-      trade = key
-    }
+      };
+      list.push(Object.assign(o, { [key]: { close } }));
+      lastPrice = close;
+      trade = key;
+    };
 
     if (this.percent(second.close, first.close) > 0) {
       recordTrade('upward_trend', second.trade_date, second.close);
@@ -237,114 +243,153 @@ export class AppComponent implements OnInit {
     }
 
     for (const { trade_date, close } of arr) {
-      // 补充逻辑
-      if (trade === 'upward_trend' && this.isTrade(close, 'upward_trend', list, (p) => p > 0)) {
-        console.log('补充逻辑-1');
+      switch (String(trade)) {
+        // 上升趋势
+        case 'upward_trend':
+          // 6-a 上涨趋势中做价格记录，最新价格下跌幅度达到大约6点
+          if (this.isTrade(close, 'upward_trend', list, (p) => p > -6)) {
+            console.log('6-a');
 
-        // 填入上涨
-        recordTrade('upward_trend', trade_date, close); continue
-      }
-      if (trade === 'downward_trend' && this.isTrade(close, 'downward_trend', list, (p) => p < 0)) {
-        console.log('补充逻辑-2');
+            // 填入自然回调栏
+            recordTrade('natural_reaction', trade_date, close);
+            continue;
+          }
+          break;
+        // 下降趋势
+        case 'downward_trend':
+          // 6-c 下跌行情中记录行情，最新价格上涨幅度达到大约6点
+          if (this.isTrade(close, 'downward_trend', list, (p) => p > 6)) {
+            console.log('6-c');
 
-        // 填入上涨
-        recordTrade('downward_trend', trade_date, close); continue
-      }
+            // 填入自然回升栏
+            recordTrade('natural_rally', trade_date, close);
+            continue;
+          }
+          break;
+        // 自然回升
+        case 'natural_rally':
+          // 5-a 自然回升栏中做价格记录，最新价比自然回调内画黑线的最后一个价格涨了3点或更多
+          if (
+            (this.isTrade(close, 'natural_rally', list, (p) => p > 3),
+            'black-line')
+          ) {
+            console.log('5-a');
 
-      // 6-d 6-f 最新价格高于上涨趋势栏最后价格，继入上涨趋势栏
-      if ((trade === 'natural_reaction' || trade === 'secondary_reaction') && this.isTrade(close, 'upward_trend', list, (p) => p > 0)) {
-        console.log('6-d 6-f');
+            // 填入上涨趋势栏
+            recordTrade('upward_trend', trade_date, close);
+            continue;
+          }
 
-        // 填入上涨趋势栏
-        recordTrade('upward_trend', trade_date, close); continue
-      }
+          // 6-b 自然回升栏做价格记录，最新价格下跌幅度达到大约6点
+          if (this.isTrade(close, 'natural_reaction', list, (p) => p > -6)) {
+            console.log('6-b');
 
-      // 6-a 只要低于自然回调栏最后记录的价格，继续填入自然回调中
-      if ((trade === 'natural_reaction' || trade === 'secondary_reaction') && this.isTrade(close, 'natural_reaction', list, (p) => p < 0)) {
-        console.log('6-a');
+            // 填入自然回调栏
+            recordTrade('natural_reaction', trade_date, close);
+            continue;
+          }
 
-        // 填入自然回调栏
-        recordTrade('natural_reaction', trade_date, close); continue
+          break;
+        // 自然回调
+        case 'natural_rally':
+          // 6-b 6-e 价格低于下跌趋势中最后价格，填入下跌趋势中
+          if (this.isTrade(close, 'downward_trend', list, (p) => p < 0)) {
+            console.log('6-b 6-e');
+
+            // 填入下跌趋势栏
+            recordTrade('downward_trend', trade_date, close);
+            continue;
+          }
+          // 6-d 自然回调中记录价格，最新价格上涨幅度大约6点
+          if (this.isTrade(close, 'natural_reaction', list, (p) => p > 6)) {
+            console.log('6-d');
+
+            // 填入自然回升栏
+            recordTrade('natural_rally', trade_date, close);
+            continue;
+          }
+          // 6-c 6-d 最新价格高于自然回升栏最后价格，继续填入自然回升栏
+          if (this.isTrade(close, 'natural_rally', list, (p) => p > 0)) {
+            console.log('6-c 6-d');
+
+            // 填入自然回升栏
+            recordTrade('natural_rally', trade_date, close);
+            continue;
+          }
+          break;
+        // 次级回调
+        case 'secondary_reaction':
+          // 6-h
+          if (this.isTrade(close, 'natural_reaction', list, (p) => p < 0)) {
+            console.log('6-h-2');
+
+            // 填入自然回调栏
+            recordTrade('natural_reaction', trade_date, close);
+            continue;
+          }
+
+          break;
+        // 次级回升
+        case 'secondary_rally':
+          // 6-g
+          if (this.isTrade(close, 'natural_rally', list, (p) => p > 0)) {
+            console.log('6-g-2');
+
+            // 填入自然回升栏
+            recordTrade('natural_rally', trade_date, close);
+            continue;
+          }
+          break;
       }
 
       // 6-h
-      if ((trade === 'natural_rally' || trade === 'secondary_reaction') && this.isTrade(close, 'natural_rally', list, (p) => p > -6) && this.isTrade(close, 'natural_reaction', list, (p) => p > 0)) {
+      if (
+        (trade === 'natural_rally' || trade === 'secondary_reaction') &&
+        this.isTrade(close, 'natural_rally', list, (p) => p > -6) &&
+        this.isTrade(close, 'natural_reaction', list, (p) => p > 0)
+      ) {
         console.log('6-h-1');
 
         // 填入次级回调
-        recordTrade('secondary_reaction', trade_date, close); continue
-      }
-
-      // 6-g 
-      if ((trade === 'natural_reaction' || trade === 'secondary_rally') && this.isTrade(close, 'natural_reaction', list, (p) => p > 6) && this.isTrade(close, 'natural_rally', list, (p) => p < 0)) {
-        console.log('6-g-1');
-
-        // 填入次级回升栏
-        recordTrade('secondary_rally', trade_date, close); continue
-      }
-
-      // 6-a 上涨趋势中做价格记录，最新价格下跌幅度达到大约6点
-      if (trade === 'upward_trend' && this.isTrade(close, 'upward_trend', list, (p) => p > -6)) {
-        console.log('6-a');
-
-        // 填入自然回调栏
-        recordTrade('natural_reaction', trade_date, close); continue
-      }
-
-      // 6-b 6-e 价格低于下跌趋势中最后价格，填入下跌趋势中
-      if (trade === 'natural_reaction' && this.isTrade(close, 'downward_trend', list, (p) => p < 0)) {
-        console.log('6-b 6-e');
-
-        // 填入下跌趋势栏
-        recordTrade('downward_trend', trade_date, close); continue
-      }
-
-      // 6-h
-      if (trade === 'secondary_reaction' && this.isTrade(close, 'natural_reaction', list, (p) => p < 0)) {
-        console.log('6-h-2');
-
-        // 填入自然回调栏
-        recordTrade('natural_reaction', trade_date, close); continue
-      }
-
-      // 6-b 自然回升栏做价格记录，最新价格下跌幅度达到大约6点
-      if (trade === 'natural_rally' && this.isTrade(close, 'natural_reaction', list, (p) => p > -6)) {
-        console.log('6-b');
-
-        // 填入自然回调栏
-        recordTrade('natural_reaction', trade_date, close); continue
-      }
-
-      // 6-c 下跌行情中记录行情，最新价格上涨幅度达到大约6点
-      if (trade === 'downward_trend' && this.isTrade(close, 'downward_trend', list, (p) => p > 6)) {
-        console.log('6-c');
-
-        // 填入自然回升栏
-        recordTrade('natural_rally', trade_date, close); continue
-      }
-
-      // 6-c 6-d 最新价格高于自然回升栏最后价格，继续填入自然回升栏
-      if (trade === 'natural_rally' && this.isTrade(close, 'natural_rally', list, (p) => p > 0)) {
-        console.log('6-c 6-d');
-
-        // 填入自然回升栏
-        recordTrade('natural_rally', trade_date, close); continue
+        recordTrade('secondary_reaction', trade_date, close);
+        continue;
       }
 
       // 6-g
-      if (trade === 'secondary_rally' && this.isTrade(close, 'natural_rally', list, (p) => p > 0)) {
-        console.log('6-g-2');
+      if (
+        (trade === 'natural_reaction' || trade === 'secondary_rally') &&
+        this.isTrade(close, 'natural_reaction', list, (p) => p > 6) &&
+        this.isTrade(close, 'natural_rally', list, (p) => p < 0)
+      ) {
+        console.log('6-g-1');
 
-        // 填入自然回升栏
-        recordTrade('natural_rally', trade_date, close); continue
+        // 填入次级回升栏
+        recordTrade('secondary_rally', trade_date, close);
+        continue;
       }
 
-      // 6-d 自然回调中记录价格，最新价格上涨幅度大约6点
-      if (trade === 'natural_reaction' && this.isTrade(close, 'natural_reaction', list, (p) => p > 6)) {
-        console.log('6-d');
+      // 6-a 只要低于自然回调栏最后记录的价格，继续填入自然回调中
+      if (
+        (trade === 'natural_reaction' || trade === 'secondary_reaction') &&
+        this.isTrade(close, 'natural_reaction', list, (p) => p < 0)
+      ) {
+        console.log('6-a');
 
-        // 填入自然回升栏
-        recordTrade('natural_rally', trade_date, close); continue
+        // 填入自然回调栏
+        recordTrade('natural_reaction', trade_date, close);
+        continue;
+      }
+
+      // 6-d 6-f 最新价格高于上涨趋势栏最后价格，继入上涨趋势栏
+      if (
+        (trade === 'natural_reaction' || trade === 'secondary_reaction') &&
+        this.isTrade(close, 'upward_trend', list, (p) => p > 0)
+      ) {
+        console.log('6-d 6-f');
+
+        // 填入上涨趋势栏
+        recordTrade('upward_trend', trade_date, close);
+        continue;
       }
 
       // 4-a 下跌幅度距离上涨趋势栏最后一个数字约6点
@@ -352,9 +397,10 @@ export class AppComponent implements OnInit {
         console.log('4-a');
 
         // 上涨趋势栏最后一个数据下画红线
-        drawLine('upward_trend', 'red-line', list)
+        drawLine('upward_trend', 'red-line', list);
         // 填入自然回调栏
-        recordTrade('natural_reaction', trade_date, close); continue
+        recordTrade('natural_reaction', trade_date, close);
+        continue;
       }
 
       // 4-b 上升幅度距离自然回调最后一个数字约6点
@@ -362,10 +408,11 @@ export class AppComponent implements OnInit {
         console.log('4-b');
 
         // 自然回调最后一个数据下画红线
-        drawLine('natural_reaction', 'red-line', list)
+        drawLine('natural_reaction', 'red-line', list);
 
         // 填入自然回升栏
-        recordTrade('natural_rally', trade_date, close); continue
+        recordTrade('natural_rally', trade_date, close);
+        continue;
       }
 
       // 4-c 上升幅度距离下跌趋势栏最后一个数字约6点
@@ -373,10 +420,11 @@ export class AppComponent implements OnInit {
         console.log('4-c');
 
         // 下跌趋势最后一栏下画黑线
-        drawLine('downward_trend', 'black-line', list)
+        drawLine('downward_trend', 'black-line', list);
 
         // 填入自然回升栏
-        recordTrade('natural_rally', trade_date, close); continue
+        recordTrade('natural_rally', trade_date, close);
+        continue;
       }
 
       // 4-d 下跌幅度距离自然回升栏最后一个数字约6点
@@ -384,26 +432,24 @@ export class AppComponent implements OnInit {
         console.log('4-d');
 
         // 自然回升栏最后一栏下画黑线
-        drawLine('natural_rally', 'black-line', list)
+        drawLine('natural_rally', 'black-line', list);
 
         // 填入自然回调栏
-        recordTrade('natural_reaction', trade_date, close); continue
-      }
-
-      // 5-a 自然回升栏中做价格记录，最新价比自然回调内画黑线的最后一个价格涨了3点或更多
-      if (trade === 'natural_rally' && this.isTrade(close, 'natural_rally', list, (p) => p > 3), 'black-line') {
-        console.log('5-a');
-
-        // 填入上涨趋势栏
-        recordTrade('upward_trend', trade_date, close); continue
+        recordTrade('natural_reaction', trade_date, close);
+        continue;
       }
 
       // 5-b 自然回调栏中做价格记录，最新价比自然回调内画红线的最后一个价格跌了3点或更多
-      if (trade === 'natural_reaction' && this.isTrade(close, 'natural_rally', list, (p) => p > -3), 'red-line') {
+      if (
+        (trade === 'natural_reaction' &&
+          this.isTrade(close, 'natural_rally', list, (p) => p > -3),
+        'red-line')
+      ) {
         console.log('5-b');
 
         // 填入下跌趋势栏
-        recordTrade('downward_trend', trade_date, close); continue
+        recordTrade('downward_trend', trade_date, close);
+        continue;
       }
     }
     return list;
@@ -442,7 +488,7 @@ export class AppComponent implements OnInit {
             }))
             .reverse()
       ),
-      map(arr => this.groupBy(arr)),
+      map((arr) => this.groupBy(arr))
     );
   }
 }
