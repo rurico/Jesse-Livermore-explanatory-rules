@@ -246,6 +246,10 @@ export class AppComponent implements OnInit {
       switch (String(trade)) {
         // 上升趋势
         case 'upward_trend':
+          if (this.isTrade(close, 'upward_trend', list, (p) => p > 0)) {
+            recordTrade('upward_trend', trade_date, close);
+            continue;
+          }
           // 6-a 上涨趋势中做价格记录，最新价格下跌幅度达到大约6点
           if (this.isTrade(close, 'upward_trend', list, (p) => p > -6)) {
             console.log('6-a');
@@ -298,6 +302,13 @@ export class AppComponent implements OnInit {
 
             // 填入下跌趋势栏
             recordTrade('downward_trend', trade_date, close);
+            continue;
+          }
+          if (this.isTrade(close, 'upward_trend', list, (p) => p > 0)) {
+            console.log('6-b 6-e');
+
+            // 填入上升趋势栏
+            recordTrade('upward_trend', trade_date, close);
             continue;
           }
           // 6-d 自然回调中记录价格，最新价格上涨幅度大约6点
