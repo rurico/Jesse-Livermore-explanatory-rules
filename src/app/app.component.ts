@@ -233,19 +233,20 @@ export class AppComponent implements OnInit {
     }
 
     for (const { trade_date, close } of arr) {
-      // console.log(trade, lastPrice);
-      // // /* 逻辑不完整start */
-      // if (trade === 'upward_trend' && this.percent(close, lastPrice) < 0) {
-      //   // 填入自然回调栏
-      //   recordTrade('natural_reaction', trade_date, close); trade = null; continue
+      const percent = this.percent(close, lastPrice)
 
-      // }
+      console.log(percent, list);
+      // /* 逻辑不完整start */
+      if (trade === 'upward_trend' && percent < 0) {
+        // 填入自然回调栏
+        recordTrade('natural_reaction', trade_date, close); trade = null; continue
+      }
 
-      // if (trade === 'downward_trend' && this.percent(close, lastPrice) > 0) {
-      //   // 填入自然回升栏
-      //   recordTrade('natural_rally', trade_date, close); trade = null; continue
-      // }
-      // /* 逻辑不完整end */
+      if (trade === 'downward_trend' && percent > 0) {
+        // 填入自然回升栏
+        recordTrade('natural_rally', trade_date, close); trade = null; continue
+      }
+      /* 逻辑不完整end */
 
       // 6-a 上涨趋势中做价格记录，最新价格下跌幅度达到大约6点
       if (trade === 'upward_trend' && this.isTrade(close, 'upward_trend', arr, (p) => p > -6)) {
