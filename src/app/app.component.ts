@@ -56,7 +56,7 @@ export class AppComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private async: AsyncPipe
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     const UrlObservable = of<any>(new URL(window.location.toString()));
@@ -108,7 +108,7 @@ export class AppComponent implements OnInit {
     this.router.navigate([code], {
       queryParams: { startDate, endDate, token },
     });
-    this.getDailyDate();
+    // this.getDailyDate();
   }
 
   changeLocation(): void {
@@ -123,7 +123,7 @@ export class AppComponent implements OnInit {
       this.router.navigate([code], {
         queryParams: { startDate, endDate, token },
       });
-      this.getDailyDate();
+      // this.getDailyDate();
     }
     this.lastLock = !this.lastLock;
   }
@@ -171,9 +171,143 @@ export class AppComponent implements OnInit {
   }
 
   percent(quote1: any, quote2: any) {
-    quote1 = parseInt(quote1);
-    quote2 = parseInt(quote2);
+    quote1 = parseFloat(quote1);
+    quote2 = parseFloat(quote2);
     return (quote1 / quote2 - 1) * 100;
+  }
+
+  *iterRight(array: any) {
+    var i = array.length;
+    while (i--) yield array[i];
+  }
+
+  findBy(lastKey: string, arr: any[], line: string | null) {
+    for (const item of this.iterRight(arr)) {
+      const lastItem = item[lastKey]
+      // 有线，并且最后一个的class名字相等
+      if (line && lastItem && lastItem.className == line) {
+        return lastItem
+      }
+      if (lastItem) {
+        return lastItem
+      }
+    }
+    return null
+  }
+
+  isTrade(close: any, key: string, arr: any[], cb: (percent: any) => boolean, line = null): boolean {
+    const last = this.findBy(key, arr, line)
+    if (last) {
+      const p = this.percent(close, last[key])
+      return cb(p)
+    }
+    return false
+  }
+
+  groupBy(arr: any[]): any[] {
+    const head = arr.splice(0, 1)
+    const list = <any>[]
+    let trade = null
+
+    // 画线
+    const drawLine = (trade: string, line: string, arr: any[]) => {
+      const last = this.findBy(trade, arr, null)
+      last && (last.className = line)
+    }
+
+    // 记录行情和趋势
+    const recordTrade = (key: string, trade_date: string, close: number) => {
+      const o = {
+        trade_date: moment(trade_date).format('YYYY-MM-DD'),
+      }
+      list.push(Object.assign(o, { natural_reaction: close }))
+      trade = key
+    }
+    for (const { trade_date, close } of arr) {
+      // 4-a 下跌幅度距离上涨趋势栏最后一个数字约6点
+      if (this.isTrade(close, 'upward_trend', arr, (p) => p > -6)) {
+        // 上涨趋势栏最后一个数据下画红线
+        drawLine('upward_trend', 'red-line', arr)
+        // 填入自然回调栏
+        recordTrade('natural_reaction', trade_date, close); continue
+      }
+
+      // 4-b 上升幅度距离自然回调最后一个数字约6点
+      if (this.isTrade(close, 'natural_reaction', arr, (p) => p > 6)) {
+        // 自然回调最后一个数据下画红线
+        drawLine('natural_reaction', 'red-line', arr)
+
+        // 填入自然回升栏
+        recordTrade('natural_rally', trade_date, close); continue
+      }
+
+      // 4-c 上升幅度距离下跌趋势栏最后一个数字约6点
+      if (this.isTrade(close, 'downward_trend', arr, (p) => p > 6)) {
+        // 下跌趋势最后一栏下画黑线
+        drawLine('downward_trend', 'black-line', arr)
+
+        // 填入自然回升栏
+        recordTrade('natural_rally', trade_date, close); continue
+      }
+
+      // 4-d 下跌幅度距离自然回升栏最后一个数字约6点
+      if (this.isTrade(close, 'natural_rally', arr, (p) => p > -6)) {
+        // 自然回升栏最后一栏下画黑线
+        drawLine('natural_rally', 'black-line', arr)
+
+        // 填入自然回调栏
+        recordTrade('natural_reaction', trade_date, close); continue
+      }
+
+      // 5-a 自然回升栏中做价格记录，最新价比自然回调内画黑线的最后一个价格涨了3点或更多
+      if (trade === 'natural_rally' && this.isTrade(close, 'natural_rally', arr, (p) => p > 3), 'black-line') {
+        // 填入上涨趋势栏
+        recordTrade('upward_trend', trade_date, close); continue
+      }
+
+      // 5-b 自然回调栏中做价格记录，最新价比自然回调内画红线的最后一个价格跌了3点或更多
+      if (trade === 'natural_reaction' && this.isTrade(close, 'natural_rally', arr, (p) => p > -3), 'red-line') {
+        // 填入下跌趋势栏
+        recordTrade('downward_trend', trade_date, close); continue
+      }
+
+      // 6-a 上涨趋势中做价格记录，最新价格下跌幅度达到大约6点
+      if (trade === 'upward_trend' && this.isTrade(close, 'upward_trend', arr, (p) => p > -6)) {
+        // 填入自然回调栏
+        recordTrade('natural_reaction', trade_date, close); continue
+      }
+
+      // 6-a 只要低于自然回调栏最后记录的价格，继续填入自然回调中
+      if (trade === 'natural_reaction' && this.isTrade(close, 'natural_reaction', arr, (p) => p < 0)) {
+        // 填入自然回调栏
+        recordTrade('natural_reaction', trade_date, close); continue
+      }
+
+      // 6-b 自然回升栏做价格记录，最新价格下跌幅度达到大约6点
+      if (trade === 'natural_rally' && this.isTrade(close, 'natural_reaction', arr, (p) => p > -6)) {
+        // 填入自然回调栏
+        recordTrade('natural_reaction', trade_date, close); continue
+      }
+
+      // 6-b 价格低于下跌趋势中最后价格，填入下跌趋势中
+      if (trade === 'natural_reaction' && this.isTrade(close, 'downward_trend', arr, (p) => p < 0)) {
+        // 填入下跌趋势栏
+        recordTrade('downward_trend', trade_date, close); continue
+      }
+
+      // 6-c 下跌行情中记录行情，最新价格上涨幅度达到大约6点
+      if (trade === 'downward_trend' && this.isTrade(close, 'downward_trend', arr, (p) => p > 6)) {
+        // 填入自然回升栏
+        recordTrade('natural_rally', trade_date, close); continue
+      }
+
+      // 6-c 最新价格高于自然回升栏最后价格，继续填入自然回升栏
+      if (trade === 'natural_rally' && this.isTrade(close, 'natural_rally', arr, (p) => p > 0)) {
+        // 填入自然回升栏
+        recordTrade('natural_rally', trade_date, close); continue
+      }
+    }
+    return list;
   }
 
   async getDailyDate() {
@@ -181,7 +315,7 @@ export class AppComponent implements OnInit {
     const start = this.async.transform(this.startDate)!.toString();
     const end = this.async.transform(this.endDate)!.toString();
     const code = this.async.transform(this.code)!.toString();
-    const startDate = moment(start).format('YYYYMMDD');
+    const startDate = moment(start).subtract(1, 'days').format('YYYYMMDD');
     const endDate = moment(end).format('YYYYMMDD');
 
     const ts_code = this.allStockTsCode[code].code;
@@ -209,347 +343,13 @@ export class AppComponent implements OnInit {
             }))
             .reverse()
       ),
+      tap(console.log),
       map((arr) => {
-        let head = arr.splice(0, 1);
-
-        let status = null;
-
-        const last = {
-          /// 次级回升
-          secondary_rally: <any>[],
-          /// 自然回升
-          natural_rally: <any>[],
-          /// 上涨趋势
-          upward_trend: <any>[],
-          /// 下跌趋势
-          downward_trend: <any>[],
-          /// 自然回调
-          natural_reaction: <any>[],
-          /// 次级回调
-          secondary_reaction: <any>[],
-        };
-
-        const lastLine = {
-          /// 次级回升
-
-          secondary_rally: { red: null, black: null },
-          /// 自然回升
-
-          natural_rally: { red: null, black: null },
-          /// 上涨趋势
-
-          upward_trend: { red: null, black: null },
-          /// 下跌趋势
-
-          downward_trend: { red: null, black: null },
-          /// 自然回调
-
-          natural_reaction: { red: null, black: null },
-          /// 次级回调
-
-          secondary_reaction: { red: null, black: null },
-        };
-
-        const hp = this.percent(close, head.close);
-        if (hp >= 0) {
-          const ho = Object.assign(
-            {
-              trade_date: moment(head.trade_date).format('YYYY-MM-DD'),
-            },
-            { upward_trend: close }
-          );
-          last.upward_trend.push(ho);
-          status = 'upward_trend';
-        } else {
-          const ho = Object.assign(
-            {
-              trade_date: moment(head.trade_date).format('YYYY-MM-DD'),
-            },
-            { downward_trend: close }
-          );
-          last.downward_trend.push(ho);
-          status = 'downward_trend';
-        }
-
-        for (const { trade_date, close } of arr) {
-          const obj = {
-            trade_date: moment(trade_date).format('YYYY-MM-DD'),
-          };
-          switch (status) {
-            case 'natural_rally':
-              // 6-h
-              if (last.natural_rally.length) {
-                const p1 = this.percent(
-                  close,
-                  last.natural_rally.last().natural_rally
-                );
-                const p2 = this.percent(
-                  close,
-                  last.natural_reaction.last().natural_reaction
-                );
-                if (p1 >= 6 && p2 <= 0) {
-                  Object.assign(obj, { secondary_reaction: close });
-                  last.secondary_reaction.push(obj);
-                  status = 'secondary_reaction';
-                }
-                if (p2 >= 0) {
-                  Object.assign(obj, { natural_reaction: close });
-                  last.natural_reaction.push(obj);
-                  status = 'natural_reaction';
-                }
-              }
-              // 6-f
-              if (last.upward_trend.length) {
-                const p = this.percent(
-                  close,
-                  last.upward_trend.last().upward_trend
-                );
-                if (p >= 0) {
-                  Object.assign(obj, { upward_trend: close });
-                  last.upward_trend.push(obj);
-                  status = 'upward_trend';
-                }
-              }
-              // 5-a
-              if (lastLine.natural_rally.black) {
-                const p = this.percent(close, lastLine.natural_rally.black);
-                if (p >= 3) {
-                  Object.assign(obj, { upward_trend: close });
-                  last.upward_trend.push(obj);
-                  status = 'upward_trend';
-                }
-              }
-              // 6-b
-              if (last.natural_rally.length) {
-                const p = this.percent(
-                  close,
-                  last.natural_rally.last().natural_rally
-                );
-                if (p >= -6) {
-                  Object.assign(obj, { natural_reaction: close });
-                  last.natural_reaction.push(obj);
-                  status = 'natural_reaction';
-                }
-                // 6-c
-                if (
-                  this.percent(
-                    close,
-                    last.natural_rally.last().natural_rally
-                  ) >= 0
-                ) {
-                  Object.assign(obj, { natural_rally: close });
-                  last.natural_rally.push(obj);
-                  status = 'natural_rally';
-                }
-              }
-
-              break;
-            case 'secondary_rally':
-              // 6-g
-              if (last.secondary_rally.length) {
-                const p1 = this.percent(
-                  close,
-                  last.natural_reaction.last().natural_reaction
-                );
-                const p2 = this.percent(
-                  close,
-                  last.natural_rally.last().natural_rally
-                );
-                if (p1 >= 6 && p2 <= 0) {
-                  Object.assign(obj, { secondary_rally: close });
-                  last.secondary_rally.push(obj);
-                  status = 'secondary_rally';
-                }
-                if (p2 >= 0) {
-                  Object.assign(obj, { natural_rally: close });
-                  last.natural_rally.push(obj);
-                  status = 'natural_rally';
-                }
-              }
-              break;
-            case 'natural_reaction':
-              // 6-g
-              if (last.natural_reaction.length) {
-                const p1 = this.percent(
-                  close,
-                  last.natural_reaction.last().natural_reaction
-                );
-                const p2 = this.percent(
-                  close,
-                  last.natural_rally.last().natural_rally
-                );
-                if (p1 >= 6 && p2 <= 0) {
-                  Object.assign(obj, { secondary_rally: close });
-                  last.secondary_rally.push(obj);
-                  status = 'secondary_rally';
-                }
-              }
-              // 6-e
-              if (last.downward_trend.length) {
-                const p = this.percent(
-                  close,
-                  last.downward_trend.last().downward_trend
-                );
-                if (p <= 0) {
-                  Object.assign(obj, { downward_trend: close });
-                  last.downward_trend.push(obj);
-                  status = 'downward_trend';
-                }
-              }
-              // 6-d
-              if (last.upward_trend.length) {
-                const p = this.percent(
-                  close,
-                  last.upward_trend.last().upward_trend
-                );
-                if (p >= 6) {
-                  Object.assign(obj, { upward_trend: close });
-                  last.upward_trend.push(obj);
-                  status = 'upward_trend';
-                }
-              }
-              // 6-d
-              if (last.natural_rally.length) {
-                const p = this.percent(
-                  close,
-                  last.natural_rally.last().natural_rally
-                );
-                if (p >= 0) {
-                  Object.assign(obj, { natural_rally: close });
-                  last.natural_rally.push(obj);
-                  status = 'natural_rally';
-                }
-              }
-              // 5-b
-              if (lastLine.natural_reaction.red) {
-                const p = this.percent(close, lastLine.natural_rally.red);
-                if (p >= -3) {
-                  Object.assign(obj, { downward_trend: close });
-                  last.downward_trend.push(obj);
-                  status = 'downward_trend';
-                }
-              }
-              // 6-d
-              if (last.natural_reaction.length) {
-                const p = this.percent(
-                  close,
-                  last.natural_reaction.last().natural_reaction
-                );
-                if (p >= 6) {
-                  Object.assign(obj, { natural_rally: close });
-                  last.natural_rally.push(obj);
-                  status = 'natural_rally';
-                }
-              }
-              break;
-            case 'upward_trend':
-              // 6-a
-              if (last.upward_trend.length) {
-                const p = this.percent(
-                  close,
-                  last.natural_rally.last().natural_rally
-                );
-                if (p >= -6) {
-                  Object.assign(obj, { natural_reaction: close });
-                  last.natural_reaction.push(obj);
-                  status = 'natural_reaction';
-                }
-              }
-              break;
-            case 'downward_trend':
-              // 6-c
-              if (last.downward_trend.length) {
-                const p = this.percent(
-                  close,
-                  last.downward_trend.last().downward_trend
-                );
-                if (p >= 6) {
-                  Object.assign(obj, { natural_rally: close });
-                  last.natural_rally.push(obj);
-                  status = 'natural_rally';
-                }
-              }
-              break;
-          }
-          // 4-a
-          if (last.upward_trend.length) {
-            const p = this.percent(
-              close,
-              last.upward_trend.last().upward_trend
-            );
-            if (p >= -6) {
-              Object.assign(obj, { natural_reaction: close });
-              last.natural_reaction.push(obj);
-              status = 'natural_reaction';
-            }
-            if (last.upward_trend.last()) {
-              last.upward_trend.last().className += 'under-red';
-              lastLine.upward_trend.red = close;
-            }
-          }
-          // 4-b
-          if (last.natural_reaction.length) {
-            const p = this.percent(
-              close,
-              last.natural_reaction.last().natural_reaction
-            );
-            if (p >= 6) {
-              Object.assign(obj, { natural_reaction: close });
-              last.natural_reaction.push(obj);
-              status = 'natural_reaction';
-            }
-            if (last.natural_reaction.last()) {
-              last.natural_reaction.last().className += 'under-red';
-              lastLine.natural_reaction.red = close;
-            }
-          }
-          // 4-c
-          if (last.downward_trend.length) {
-            const p = this.percent(
-              close,
-              last.downward_trend.last().downward_trend
-            );
-            if (p >= 6) {
-              Object.assign(obj, { natural_rally: close });
-              last.natural_rally.push(obj);
-              status = 'natural_rally';
-            }
-            if (last.downward_trend.last()) {
-              last.downward_trend.last().className += 'under-black';
-              lastLine.downward_trend.black = close;
-            }
-          }
-          // 4-d
-          if (last.natural_rally.length) {
-            const p = this.percent(
-              close,
-              last.natural_rally.last().natural_rally
-            );
-            if (p >= -6) {
-              Object.assign(obj, { natural_rally: close });
-              last.natural_rally.push(obj);
-              status = 'natural_rally';
-            }
-            if (last.natural_rally.last()) {
-              last.natural_rally.last().className += 'under-black';
-              lastLine.natural_rally.black = close;
-            }
-          }
-        }
-
-        const r = []
-          .concat(
-            last.secondary_rally,
-            last.natural_rally,
-            last.upward_trend,
-            last.downward_trend,
-            last.natural_reaction,
-            last.secondary_reaction
-          )
-          .sort((a: any, b: any) => moment(a.trade_date).diff(b.trade_date));
-        console.log(r);
-
-        return r;
+        return arr.map(({ trade_date, close }: any) => ({
+          trade_date: moment(trade_date).format('YYYY-MM-DD'),
+          upward_trend: { close }
+        })
+        )
       })
     );
   }

@@ -6,7 +6,7 @@
   <mat-toolbar-row>
     <mat-form-field appearance="fill">
       <mat-label>Stock code</mat-label>
-      <input matInput #postalCode maxlength="6" placeholder="stock code" (change)="changeCode($event)"
+      <input matInput #postalCode placeholder="Stock code" (change)="changeCode($event)"
         [value]="code|async">
     </mat-form-field>
     <mat-form-field appearance="fill">
@@ -28,37 +28,37 @@
 
 <table mat-table [dataSource]="chat" class="mat-elevation-z8">
   <ng-container matColumnDef="date">
-    <th mat-header-cell *matHeaderCellDef>日期</th>
+    <th mat-header-cell *matHeaderCellDef width="75">日期</th>
     <td mat-cell *matCellDef="let element"> {{element.trade_date}} </td>
   </ng-container>
 
   <ng-container matColumnDef="secondary_rally">
     <th mat-header-cell *matHeaderCellDef>次级回升</th>
-    <td mat-cell *matCellDef="let element" [ngClass]="element.secondary_rally?.className"> {{element.secondary_rally?.close}} </td>
+    <td mat-cell *matCellDef="let element" [ngClass]="element.secondary_rally?.className" class="write"> {{element.secondary_rally?.close}} </td>
   </ng-container>
 
   <ng-container matColumnDef="natural_rally">
     <th mat-header-cell *matHeaderCellDef>自然回升</th>
-    <td mat-cell *matCellDef="let element" [ngClass]="element.natural_rally?.className"> {{element.natural_rally?.close}} </td>
+    <td mat-cell *matCellDef="let element" [ngClass]="element.natural_rally?.className" class="write"> {{element.natural_rally?.close}} </td>
   </ng-container>
 
   <ng-container matColumnDef="upward_trend">
     <th mat-header-cell *matHeaderCellDef>上涨趋势</th>
-    <td mat-cell *matCellDef="let element" [ngClass]="element.upward_trend?.className" class="red"> {{element.upward_trend?.close}} </td>
+    <td mat-cell *matCellDef="let element" [ngClass]="element.upward_trend?.className" class="black"> {{element.upward_trend?.close}} </td>
   </ng-container>
 
   <ng-container matColumnDef="downward_trend">
     <th mat-header-cell *matHeaderCellDef>下跌趋势</th>
-    <td mat-cell *matCellDef="let element" [ngClass]="element.downward_trend?.className" class="green"> {{element.downward_trend?.close}} </td>
+    <td mat-cell *matCellDef="let element" [ngClass]="element.downward_trend?.className" class="red"> {{element.downward_trend?.close}} </td>
   </ng-container>
 
   <ng-container matColumnDef="natural_reaction">
     <th mat-header-cell *matHeaderCellDef>自然回调</th>
-    <td mat-cell *matCellDef="let element" [ngClass]="element.natural_reaction?.className"> {{element.natural_reaction?.close}} </td>
+    <td mat-cell *matCellDef="let element" [ngClass]="element.natural_reaction?.className" class="write"> {{element.natural_reaction?.close}} </td>
   </ng-container>
   <ng-container matColumnDef="secondary_reaction">
     <th mat-header-cell *matHeaderCellDef>次级回调</th>
-    <td mat-cell *matCellDef="let element" [ngClass]="element.secondary_reaction?.className"> {{element.secondary_reaction?.close}} </td>
+    <td mat-cell *matCellDef="let element" [ngClass]="element.secondary_reaction?.className" class="write"> {{element.secondary_reaction?.close}} </td>
   </ng-container>
 
   <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>

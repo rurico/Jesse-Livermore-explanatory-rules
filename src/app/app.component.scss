@@ -1,9 +1,52 @@
 table {
   width: 100%;
 }
-.red {
-  color: #ea553a;
+
+.mat-header-cell {
+  text-align: center;
 }
-.green {
-  color: #65ab31;
+
+.mat-cell {
+  text-align: center;
+}
+
+.black {
+  color: #24140e;
+}
+
+.red {
+  color: #d70035;
+}
+
+.write {
+  font-family: "Oleo Script", cursive;
+  color: #abb1b5;
+}
+
+.black-line {
+  position: relative;
+  &::after {
+    content: " ";
+    width: 2.5rem;
+    height: 0.12rem;
+    background: #24140e;
+    position: absolute;
+    bottom: -0.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+}
+
+.red-line {
+  position: relative;
+  &::after {
+    content: " ";
+    width: 2.5rem;
+    height: 0.12rem;
+    background: #d70035;
+    position: absolute;
+    bottom: -0.1rem;
+    left: 50%;
+    transform: translateX(-50%);
+  }
 }
