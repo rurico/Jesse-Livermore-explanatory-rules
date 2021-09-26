@@ -198,7 +198,7 @@ export class AppComponent implements OnInit {
   isTrade(close: any, key: string, arr: any[], cb: (percent: any) => boolean, line = null): boolean {
     const last = this.findBy(key, arr, line)
     if (last) {
-      const p = this.percent(close, last[key])
+      const p = this.percent(close, last[key].close)
       return cb(p)
     }
     return false
@@ -220,7 +220,7 @@ export class AppComponent implements OnInit {
       const o = {
         trade_date: moment(trade_date).format('YYYY-MM-DD'),
       }
-      list.push(Object.assign(o, { natural_reaction: close }))
+      list.push(Object.assign(o, { natural_reaction: { close } }))
       trade = key
     }
     for (const { trade_date, close } of arr) {
@@ -277,6 +277,12 @@ export class AppComponent implements OnInit {
         recordTrade('natural_reaction', trade_date, close); continue
       }
 
+      // 6-b 价格低于下跌趋势中最后价格，填入下跌趋势中
+      if (trade === 'natural_reaction' && this.isTrade(close, 'downward_trend', arr, (p) => p < 0)) {
+        // 填入下跌趋势栏
+        recordTrade('downward_trend', trade_date, close); continue
+      }
+
       // 6-a 只要低于自然回调栏最后记录的价格，继续填入自然回调中
       if (trade === 'natural_reaction' && this.isTrade(close, 'natural_reaction', arr, (p) => p < 0)) {
         // 填入自然回调栏
@@ -289,20 +295,26 @@ export class AppComponent implements OnInit {
         recordTrade('natural_reaction', trade_date, close); continue
       }
 
-      // 6-b 价格低于下跌趋势中最后价格，填入下跌趋势中
-      if (trade === 'natural_reaction' && this.isTrade(close, 'downward_trend', arr, (p) => p < 0)) {
-        // 填入下跌趋势栏
-        recordTrade('downward_trend', trade_date, close); continue
-      }
-
       // 6-c 下跌行情中记录行情，最新价格上涨幅度达到大约6点
       if (trade === 'downward_trend' && this.isTrade(close, 'downward_trend', arr, (p) => p > 6)) {
         // 填入自然回升栏
         recordTrade('natural_rally', trade_date, close); continue
       }
 
+      // 6-d 最新价格高于上涨趋势栏最后价格，继入上涨趋势栏
+      if (trade === 'natural_rally' && this.isTrade(close, 'upward_trend', arr, (p) => p > 0)) {
+        // 填入上涨趋势栏
+        recordTrade('upward_trend', trade_date, close); continue
+      }
+
       // 6-c 最新价格高于自然回升栏最后价格，继续填入自然回升栏
       if (trade === 'natural_rally' && this.isTrade(close, 'natural_rally', arr, (p) => p > 0)) {
+        // 填入自然回升栏
+        recordTrade('natural_rally', trade_date, close); continue
+      }
+
+      // 6-d 自然回调中记录价格，最新价格上涨幅度大约6点
+      if (trade === 'natural_reaction' && this.isTrade(close, 'natural_reaction', arr, (p) => p > 6)) {
         // 填入自然回升栏
         recordTrade('natural_rally', trade_date, close); continue
       }
