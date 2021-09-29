@@ -28,7 +28,7 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
     ReactiveFormsModule,
     RouterModule.forRoot([
       { path: '', redirectTo: '/', pathMatch: 'full' },
-      { path: ':code', component: AppComponent },
+      { path: 'market/:code', component: AppComponent },
       { path: '**', redirectTo: '/' },
     ]),
   ],

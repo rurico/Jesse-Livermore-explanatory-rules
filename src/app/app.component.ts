@@ -105,7 +105,7 @@ export class AppComponent implements OnInit {
     const startDate = this.async.transform(this.startDate);
     const endDate = this.async.transform(this.endDate);
     const token = this.async.transform(this.token);
-    this.router.navigate([code], {
+    this.router.navigate(['market', code], {
       queryParams: { startDate, endDate, token },
     });
     setTimeout(() => {
@@ -122,7 +122,7 @@ export class AppComponent implements OnInit {
       const endDate = moment(end).format('YYYYMMDD');
       const code = this.async.transform(this.code);
       const token = this.async.transform(this.token);
-      this.router.navigate([code], {
+      this.router.navigate(['market', code], {
         queryParams: { startDate, endDate, token },
       });
       setTimeout(() => {
@@ -134,7 +134,11 @@ export class AppComponent implements OnInit {
 
   requestTushare(param: any): Observable<AjaxResponse> {
     return ajax.post(
+<<<<<<< Updated upstream
       'http://localhost:4200/api',
+=======
+      'https://stock.ruriya.com/api',
+>>>>>>> Stashed changes
       Object.assign({ token: this.async.transform(this.token) }, param),
       { 'Content-Type': 'application/json' }
     );
