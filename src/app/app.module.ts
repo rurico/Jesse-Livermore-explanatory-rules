@@ -28,11 +28,11 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
     ReactiveFormsModule,
     RouterModule.forRoot([
       { path: '', redirectTo: '/', pathMatch: 'full' },
-      { path: 'market/:code', component: AppComponent },
+      { path: ':code', component: AppComponent },
       { path: '**', redirectTo: '/' },
-    ]),
+    ], { useHash: true }),
   ],
   providers: [MatDatepickerModule],
   bootstrap: [AppComponent],
 })
-export class AppModule {}
+export class AppModule { }

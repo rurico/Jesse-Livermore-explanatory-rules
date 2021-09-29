@@ -56,12 +56,12 @@ export class AppComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private async: AsyncPipe
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     const UrlObservable = of<any>(new URL(window.location.toString()));
     this.code = UrlObservable.pipe(
-      map(({ pathname }: any) => pathname.substr(1))
+      map(({ hash }: any) => hash.match(/\/\d{6}/g)[0].substr(1))
     );
 
     this.queryParams = this.route.queryParams;
@@ -105,7 +105,7 @@ export class AppComponent implements OnInit {
     const startDate = this.async.transform(this.startDate);
     const endDate = this.async.transform(this.endDate);
     const token = this.async.transform(this.token);
-    this.router.navigate(['market', code], {
+    this.router.navigate([code], {
       queryParams: { startDate, endDate, token },
     });
     setTimeout(() => {
@@ -122,7 +122,7 @@ export class AppComponent implements OnInit {
       const endDate = moment(end).format('YYYYMMDD');
       const code = this.async.transform(this.code);
       const token = this.async.transform(this.token);
-      this.router.navigate(['market', code], {
+      this.router.navigate([code], {
         queryParams: { startDate, endDate, token },
       });
       setTimeout(() => {
@@ -134,7 +134,7 @@ export class AppComponent implements OnInit {
 
   requestTushare(param: any): Observable<AjaxResponse> {
     return ajax.post(
-      'http://localhost:4200/api',
+      '/api',
       Object.assign({ token: this.async.transform(this.token) }, param),
       { 'Content-Type': 'application/json' }
     );
@@ -275,7 +275,7 @@ export class AppComponent implements OnInit {
           // 5-a 自然回升栏中做价格记录，最新价比自然回调内画黑线的最后一个价格涨了3点或更多
           if (
             (this.isTrade(close, 'natural_rally', list, (p) => p > 3),
-            'black-line')
+              'black-line')
           ) {
             console.log('5-a');
 
@@ -454,7 +454,7 @@ export class AppComponent implements OnInit {
       if (
         (trade === 'natural_reaction' &&
           this.isTrade(close, 'natural_rally', list, (p) => p > -3),
-        'red-line')
+          'red-line')
       ) {
         console.log('5-b');
 
@@ -468,8 +468,8 @@ export class AppComponent implements OnInit {
 
   async getDailyDate() {
     await this.wait(this.allStockTsCode);
-    const start = this.async.transform(this.startDate)!.toString();
-    const end = this.async.transform(this.endDate)!.toString();
+    const start = this.async.transform(this.startDate)?.toString();
+    const end = this.async.transform(this.endDate)?.toString();
     const code = this.async.transform(this.code)!.toString();
     const startDate = moment(start).subtract(1, 'days').format('YYYYMMDD');
     const endDate = moment(end).format('YYYYMMDD');
